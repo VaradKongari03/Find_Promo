@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Find the Promos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#E9EDF0;--paper:#FBFCFD;--ink:#16202A;--muted:#4E5B67;--rule:#C9D1D8;--seg:#2440C9;--hook:#B8163C;--withheld:#E0A400;--a:#14663D;--b:#3D4A57;--c:#8A939C}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Atkinson Hyperlegible",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.top{background:var(--ink);color:#EEF1F4;padding:16px 32px;display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+.top b{font:700 22px "Courier Prime",ui-monospace,monospace}.top span{color:#B8C3CE;font-size:14px}
+.wrap{max-width:1120px;margin:0 auto;padding:32px 24px 96px;display:flex;flex-direction:column;gap:20px}
+h1{font:700 2.2rem/1.15 "Courier Prime",ui-monospace,monospace;margin:0}
+.lede{margin:0;color:var(--muted);max-width:70ch}
+.step{background:var(--paper);border-radius:12px;padding:22px 26px;display:flex;flex-direction:column;gap:14px}
+.step h2{margin:0;font-size:1.2rem;display:flex;gap:12px;align-items:baseline}.step h2 i{font:700 1rem "Courier Prime",monospace;font-style:normal;color:var(--seg)}
+.drop{border:2px dashed var(--rule);border-radius:10px;padding:22px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.drop.over{border-color:var(--seg);background:#EEF1FB}
+label.btn,button.btn{display:inline-flex;align-items:center;gap:8px;font:inherit;font-weight:700;font-size:.95rem;padding:10px 16px;min-height:44px;border-radius:8px;border:1px solid var(--ink);background:var(--paper);color:var(--ink);cursor:pointer}
+label.btn.primary,button.btn.primary{background:var(--seg);border-color:var(--seg);color:#fff}
+button.btn:disabled{opacity:.5;cursor:wait}
+label.btn input{position:absolute;width:1px;height:1px;opacity:0}
+.msg{margin:0;font-size:.92rem;color:var(--muted)}.msg.ok{color:var(--a)}.msg.bad{color:var(--hook)}
+.provs{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.prov{border:1px solid var(--rule);border-radius:10px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.prov:has(input:checked){border:2px solid var(--seg);background:#EEF1FB}
+.prov input{margin-top:5px}.prov b{display:block}.prov small{color:var(--muted)}
+.fields{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:4px;font-size:.9rem;color:var(--muted)}
+.field input{font:inherit;color:var(--ink);padding:9px 10px;border:1px solid #9AA6B2;border-radius:6px;background:#fff;min-width:0}
+.field input[type=number]{width:90px}.grow{flex:1 1 280px}
+details.opts summary{cursor:pointer;color:var(--seg);font-size:.95rem}
+.note{font-size:.85rem;color:var(--muted);margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-width:34px;text-align:center;font:700 .8rem "Courier Prime",monospace;padding:4px 6px;border-radius:6px;background:#E3E7EB;color:var(--muted)}
+.chip.run{background:#E2E7FB;color:#16236E;outline:2px solid var(--seg)}.chip.done{background:#DDEFE3;color:var(--a)}.chip.fail{background:#F8DCE2;color:var(--hook)}
+#log{list-style:none;margin:0;padding:0;font:.85rem/1.5 "Courier Prime",monospace;color:var(--muted);max-height:220px;overflow:auto}#log .bad{color:var(--hook)}
+.status{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-weight:700}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;position:sticky;top:0;background:var(--bg);padding:10px 0;z-index:2;border-bottom:1px solid var(--rule)}
+.toolbar .count{margin-left:auto;color:var(--muted);font-size:.9rem}
+[role=tablist]{display:flex;flex-wrap:wrap;gap:8px}
+[role=tab]{font:inherit;font-size:.92rem;padding:7px 14px;min-height:40px;border-radius:999px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);cursor:pointer}
+[role=tab][aria-selected=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:.85rem;color:var(--muted)}.legend i{display:inline-block;width:18px;height:10px;vertical-align:middle;margin-right:6px;border-radius:2px}
+.promo{background:var(--paper);border-left:6px solid var(--c);padding:18px 22px 16px;margin:0 0 12px;border-radius:2px 10px 10px 2px}
+.promo.tierA{border-left-color:var(--a)}.promo.tierB{border-left-color:var(--b)}.promo.tierR{border-left-color:#9AA6B2}
+.promo.is-keep{outline:2px solid var(--a)}.promo.is-reject{opacity:.6}
+.slate{display:grid;grid-template-columns:64px 1fr auto;gap:16px;align-items:start}
+.num{display:block;font:700 2rem/1 "Courier Prime",monospace}.tierlbl{font-size:.8rem;color:var(--muted)}.tierA .tierlbl{color:var(--a);font-weight:700}
+.segs{display:flex;flex-wrap:wrap;gap:6px}
+.copy{font:700 1rem "Atkinson Hyperlegible",sans-serif;border:0;background:#E2E7FB;color:#16236E;padding:3px 8px;border-radius:5px;cursor:pointer}
+.meta{margin:.35rem 0 0;color:var(--muted);font-size:.9rem}
+.decide{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:280px}
+.decide>button{font:inherit;font-weight:700;font-size:.9rem;border:1px solid #9AA6B2;background:var(--paper);padding:6px 14px;min-height:40px;border-radius:7px;cursor:pointer}
+.decide .keep[aria-pressed=true]{background:var(--a);color:#fff;border-color:var(--a)}.decide .reject[aria-pressed=true]{background:var(--hook);color:#fff;border-color:var(--hook)}
+.reasons{display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-end}
+.rsn{font:inherit;font-size:.8rem;padding:3px 9px;border-radius:999px;border:1px solid var(--rule);background:var(--paper);cursor:pointer}.rsn.on{background:var(--ink);color:#fff}
+.strip{position:relative;height:28px;margin:14px 0 16px;background:repeating-linear-gradient(90deg,#F1F3F5 0 6px,#E6E9EC 6px 7px);border-radius:3px}
+.strip .seg{position:absolute;top:4px;bottom:4px;background:var(--seg);border-radius:2px}
+.strip .hookwin{position:absolute;top:0;bottom:0;background:var(--hook);min-width:3px}
+.strip .withheld{position:absolute;top:8px;bottom:8px;background:repeating-linear-gradient(45deg,var(--withheld) 0 4px,transparent 4px 8px)}
+.strip .cut{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink)}
+.strip .t0,.strip .t1{position:absolute;top:100%;font-size:.7rem;color:var(--muted)}.strip .t1{right:0}
+.beats{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:6px}
+h3{font-size:.85rem;margin:0 0 .2rem;color:var(--muted)}h3.hk{color:var(--hook)}
+.line{font:1rem/1.45 "Courier Prime",ui-monospace,monospace;margin:0}
+.withheldtxt{font-size:.88rem;color:var(--muted);margin:.5rem 0 0;padding-left:10px;border-left:3px solid var(--withheld)}
+.why{margin:12px 0 6px;max-width:75ch}
+details summary{cursor:pointer;color:var(--seg);font-size:.9rem}
+.scores{display:grid;gap:8px;margin:12px 0}.sc{display:grid;grid-template-columns:30px 1fr;gap:10px;font-size:.92rem}
+.n{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#EEF0F2;font-weight:700}.n4,.n5{background:#D6EBDD;color:var(--a)}.n1,.n2{background:#F8DCE2;color:var(--hook)}
+.stranger{background:#F2F4F6;padding:10px 14px;border-radius:6px;font-size:.92rem;margin:10px 0}.stranger h4{margin:0 0 .3rem;font-size:.88rem}.stranger p{margin:.15rem 0}
+.muted{color:var(--muted);font-size:.88rem}
+.transcript{list-style:none;padding:8px 0 0;font:.9rem/1.5 "Courier Prime",monospace;max-height:300px;overflow:auto;border-top:1px solid var(--rule)}
+.transcript .tc{color:var(--muted);display:inline-block;width:56px}.transcript .who{font-weight:700}
+.flags{list-style:none;padding:0;margin:10px 0 0;display:flex;flex-direction:column;gap:4px}
+.flag{font-size:.85rem;padding:3px 10px;border-radius:4px}.flag.spoil{background:#FFF1C7}.flag.warn{background:#FBE6EA}.flag.fix{background:#EEF1FB;color:#33406B}
+.rejected{background:var(--paper);border-radius:10px;padding:14px 22px}.rejected li{margin:.35rem 0}
+:focus-visible{outline:3px solid var(--seg);outline-offset:2px}
+@media (max-width:760px){.slate{grid-template-columns:48px 1fr}.decide{grid-column:1/-1;justify-content:flex-start;max-width:none}.reasons{justify-content:flex-start}.beats{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="top"><b>Find the Promos</b><span>Finds 20–60 s promo clips in a microdrama screenplay, with exact timecodes</span></div>
+<div class="wrap">
+<div>
+<h1>Find promo clips in a show’s scripts</h1>
+<p class="lede">Load the screenplays, pick a model, and get a ranked shortlist: episode, start and end of every segment, the hook, the cliffhanger and why it works. The model never writes timestamps; it cites line IDs and the page converts them, then checks every clip (20–60 s, hook within 3 s, no cut mid-sentence).</p>
+</div>
+
+<section class="step" aria-labelledby="s1">
+<h2 id="s1"><i>1</i> Load the scripts</h2>
+<div class="drop" id="drop">
+<span>Drop the episode <b>.txt</b> files here, or</span>
+<span style="display:flex;gap:10px;flex-wrap:wrap">
+<label class="btn primary">Choose the show’s folder<input id="folderIn" type="file" webkitdirectory directory multiple></label>
+<label class="btn">Choose files<input id="filesIn" type="file" accept=".txt" multiple></label>
+</span>
+</div>
+<p class="msg" id="loadMsg">One .txt screenplay per episode, in Kuku’s format. Unzip the pack first. Files stay in your browser.</p>
+</section>
+
+<form class="step" id="step2" hidden aria-labelledby="s2" autocomplete="off">
+<h2 id="s2"><i>2</i> Choose who judges the clips</h2>
+<div class="provs" role="radiogroup" aria-label="Model">
+<label class="prov"><input type="radio" name="prov" value="gemini" checked><span><b>Gemini</b><small>Free key from Google AI Studio</small></span></label>
+<label class="prov"><input type="radio" name="prov" value="openai"><span><b>Any OpenAI-compatible API</b><small>OpenAI, Groq, OpenRouter, a company gateway</small></span></label>
+<label class="prov"><input type="radio" name="prov" value="rules"><span><b>Rules only</b><small>No AI, instant. For comparison</small></span></label>
+<label class="prov"><input type="radio" name="prov" value="replay"><span><b>Replay a saved run</b><small>Load a run’s llm_raw folder; no key</small></span></label>
+</div>
+<div data-prov="gemini" class="fields">
+<label class="field grow">Gemini API key <input id="gemKey" type="password" placeholder="AIza…" spellcheck="false"></label>
+<label class="field">Model <input id="gemModel" list="gemModels" value="gemini-flash-latest" spellcheck="false"><datalist id="gemModels"></datalist></label>
+<button type="button" class="btn" id="checkKey">Check key</button>
+<p class="msg" id="keyMsg" style="flex-basis:100%">Get a free key at aistudio.google.com/apikey. It stays in this tab’s memory and is sent only to Google.</p>
+</div>
+<div data-prov="openai" class="fields" hidden>
+<label class="field grow">Base URL <input id="oaBase" value="https://api.openai.com/v1" spellcheck="false"></label>
+<label class="field">Model <input id="oaModel" placeholder="model id" spellcheck="false"></label>
+<label class="field grow">API key <input id="oaKey" type="password" spellcheck="false"></label>
+</div>
+<div data-prov="replay" class="fields" hidden>
+<label class="btn">Choose the llm_raw folder<input id="replayIn" type="file" webkitdirectory directory multiple></label>
+<p class="msg" id="replayMsg">Reproduces a previous run exactly from its saved model answers.</p>
+</div>
+<details class="opts" id="aiOpts"><summary>Options</summary>
+<div class="fields" style="margin-top:10px">
+<label class="field">From episode <input id="fromEp" type="number" min="1" value="1"></label>
+<label class="field">To episode <input id="toEp" type="number" min="1" value="3"></label>
+<label class="field">Calls at once <input id="parallel" type="number" min="1" max="8" value="3"></label>
+<label class="field">Blind-test top <input id="blindN" type="number" min="0" max="40" value="15"></label>
+<label class="field">Free episodes <input id="freeEps" type="number" min="1" value="10"></label>
+</div>
+<p class="note">Start with 3 episodes to check everything works. “Free episodes” is an assumption about the app’s paywall; clips whose payoff lands inside it rank higher.</p>
+</details>
+<div class="fields"><button type="submit" class="btn primary" id="runBtn">Find promos</button><span class="note" id="estimate"></span></div>
+<p class="msg" id="runMsg"></p>
+</form>
+
+<section class="step" id="step3" hidden aria-labelledby="s3" aria-live="polite">
+<h2 id="s3"><i>3</i> Running</h2>
+<div class="status"><span id="runStatus"></span><span id="elapsed"></span></div>
+<div class="chips" id="chips"></div>
+<ul id="log"></ul>
+</section>
+
+<section id="results" hidden aria-labelledby="s4">
+<div class="step" style="margin-bottom:12px">
+<h2 id="s4"><i>4</i> Review the shortlist</h2>
+<p class="msg" id="summary" style="color:var(--ink)"></p>
+<div class="legend"><span><i style="background:var(--seg)"></i>Clip</span><span><i style="background:var(--hook)"></i>First 3 seconds</span><span><i style="background:repeating-linear-gradient(45deg,var(--withheld) 0 4px,transparent 4px 8px)"></i>What the viewer doesn’t get to see</span><span><i style="background:var(--ink);width:3px"></i>Cut</span></div>
+</div>
+<div class="toolbar">
+<div role="tablist" aria-label="Which clips" id="tabs"></div>
+<span class="count" id="decCount"></span>
+<button class="btn" id="dlCsv" type="button">Download CSV</button>
+<button class="btn" id="cpCsv" type="button">Copy CSV</button>
+<button class="btn" id="dlJson" type="button">Download JSON</button>
+</div>
+<p class="msg" id="exportMsg"></p>
+<div id="cards"></div>
+</section>
+
+<p class="note">Privacy: scripts are read in your browser. When you use a model, each episode’s text and your key go only to that provider. Nothing is stored. Source and Python version: see the repository README.</p>
+</div>
+<script>(function(root){root.FTP_PROMPTS={"PROPOSE_SYSTEM": "You help a promo editor at a microdrama app. Promos are 20-60 second clips cut from the show and posted on TikTok, Instagram Reels and YouTube Shorts to pull NEW viewers in.\n\nA good promo:\n1. HOOK: its first 3 seconds contain something that stops a scrolling viewer - a slap or physical violence, a shocking line, a reveal, a threat, a public humiliation. Not establishing shots, not quiet setup.\n2. CLIFFHANGER: it cuts at an UNRESOLVED moment so the viewer must know what happens next. A threat not yet carried out, a question not yet answered, a reveal just landing. NOT a resolution, NOT a calm/tender ending, NOT a character walking away happily.\n3. STANDALONE: someone who has never seen the show understands who is fighting whom and what is at stake from the clip alone.\n\nPrefer ONE continuous stretch. You MAY join 2-3 stretches from the SAME episode (in story order), but only to cut a slow patch inside the same scene: each skipped gap should be short (roughly under 15 seconds) and the result must still play as one moment. Do not build a montage that jumps across scenes or skips large parts of the story - an editor has to cut every join by hand, and big jumps confuse new viewers.\n\nRules:\n- Refer to lines ONLY by their IDs (e.g. E07-L042). Never write timestamps. The numbers in [brackets] are seconds from the episode start, given only so you can estimate length.\n- Segment 1 must START on (or at most ~2 s before) the hook line.\n- The cliffhanger line must be the last meaningful line of the last segment.\n- Estimate total length from the bracketed seconds; aim for 25-55 s.\n- Propose 0 to 3 promos for this episode. If nothing here works as a promo, return an empty list - that is a valid, useful answer. Do not force weak picks.\n- Scores are 1-5 and must be honest: 5 = would stop almost anyone; 3 = okay; 1 = does not work. Give the specific evidence for each score.\n- Be specific in \"why\": name the actual moment, not generic praise.\n\nReturn ONLY JSON in this shape:\n{\"promos\": [{\n  \"segments\": [{\"start_id\": \"...\", \"end_id\": \"...\"}],\n  \"hook_id\": \"...\",\n  \"hook_type\": \"violence|shock_line|reveal|threat|humiliation|romance_tension|other\",\n  \"cliffhanger_id\": \"...\",\n  \"open_question\": \"the question the viewer is left with, max 15 words\",\n  \"why\": \"one line, max 25 words, why this works as a promo\",\n  \"scores\": {\"hook\": 1, \"cliffhanger\": 1, \"standalone\": 1},\n  \"evidence\": {\"hook\": \"...\", \"cliffhanger\": \"...\", \"standalone\": \"...\"},\n  \"context_a_stranger_lacks\": \"what a new viewer would not understand, or 'none'\",\n  \"reveals_major_twist\": false\n}]}", "STRANGER_SYSTEM": "You have NEVER seen this show. You are scrolling TikTok and this clip plays. Below is a transcript of exactly what is on screen and said in the clip - nothing else.\n\nJudge it only from what is in the clip. Do not guess plot details that are not shown.\n\nReturn ONLY JSON:\n{\"who_is_who\": \"who the characters are to each other, as far as the clip shows\",\n \"what_is_happening\": \"one sentence\",\n \"what_is_at_stake\": \"one sentence, or 'unclear'\",\n \"open_question\": \"what you would want to know next, or 'none - it feels resolved'\",\n \"confusing\": [\"things that made no sense without prior context\"],\n \"standalone_score\": 1,\n \"keep_watching_score\": 1}\nScores 1-5. standalone 5 = fully understandable cold; 1 = lost. keep_watching 5 = I must see what happens next; 1 = I'd scroll on.", "VERSION": "v2"};})(typeof window!=='undefined'?window:globalThis);</script>
+<script>/* Find the Promos - core logic for the browser (and Node, for tests).
+   A line-for-line port of promos/parse.py, verify.py, baseline.py and pipeline.py.
+   Prompts are injected at build time from promos/prompts.py (single source of truth). */
+(function (root) {
+  "use strict";
+  var P = root.FTP_PROMPTS; // {PROPOSE_SYSTEM, STRANGER_SYSTEM, VERSION}
+
+  // ---------------------------------------------------------------- parse
+  var TS = "(\\d+):(\\d+(?:\\.\\d+)?)";
+  var BLOCK_RE = /^\*\*(.+?):\*\*\s*$/;
+  var TIME_RE = new RegExp("^Start:\\s*\\(" + TS + "\\)\\s*\\|\\s*End:\\s*\\(" + TS + "\\)");
+  var SCENE_RE = /^SCENE\s+(\d+)\s*$/i;
+  var HEADING_RE = /^Scene heading:\s*(.+)$/i;
+  var NON_DIALOGUE = { "CAMERA": "camera", "ACTION": "action", "SOUND FX": "sound" };
+
+  function round2(x) { return Math.round(x * 100) / 100; }
+  function toSeconds(m, s) { return round2(parseInt(m, 10) * 60 + parseFloat(s)); }
+  function pad(n, w) { n = String(n); while (n.length < w) n = "0" + n; return n; }
+  function fmt(t) {
+    var m = Math.floor(t / 60), s = t - m * 60;
+    var ss = s.toFixed(2); if (s < 10) ss = "0" + ss;
+    return pad(m, 2) + ":" + ss;
+  }
+  function stripQuotes(s) { return s.replace(/^"+|"+$/g, "").trim(); }
+
+  function parseLabel(label) {
+    if (NON_DIALOGUE[label]) return [null, []];
+    var name = label.split("(")[0].trim(), tags = [], m, re = /\(([^)]*)\)/g;
+    while ((m = re.exec(label))) m[1].split(",").forEach(function (t) { t = t.trim(); if (t) tags.push(t); });
+    return [name, tags];
+  }
+
+  function parseEpisode(text, filename) {
+    var lines = text.split(/\r?\n/);
+    function header(key) {
+      var m = new RegExp("^" + key + ":\\s*(.+)$", "mi").exec(text);
+      return m ? m[1].trim() : "";
+    }
+    var epLabel = header("EPISODE NUMBER");
+    var m = /(\d+)/.exec(epLabel) || /episode-(\d+)/.exec(filename || "");
+    if (!m) throw new Error("No episode number in " + filename);
+    var epNum = parseInt(m[1], 10);
+    var out = [], warnings = [], scene = 0, heading = "", i = 0;
+    while (i < lines.length) {
+      var raw = lines[i].trim(), bm;
+      if (SCENE_RE.test(raw)) scene = parseInt(SCENE_RE.exec(raw)[1], 10);
+      else if (HEADING_RE.test(raw)) heading = HEADING_RE.exec(raw)[1].trim();
+      else if ((bm = BLOCK_RE.exec(raw))) {
+        var label = bm[1].trim();
+        var tm = i + 1 < lines.length ? TIME_RE.exec(lines[i + 1].trim()) : null;
+        if (!tm) { warnings.push("no timestamp after block at line " + (i + 1) + ": " + raw); i++; continue; }
+        var start = toSeconds(tm[1], tm[2]), end = toSeconds(tm[3], tm[4]);
+        var body = [], j = i + 2;
+        while (j < lines.length && lines[j].trim() && !BLOCK_RE.test(lines[j].trim())) { body.push(lines[j].trim()); j++; }
+        var st = parseLabel(label);
+        out.push({
+          id: "E" + pad(epNum, 2) + "-L" + pad(out.length + 1, 3),
+          type: NON_DIALOGUE[label] || "dialogue", speaker: st[0], tags: st[1],
+          text: stripQuotes(body.join(" ")), start: start, end: end, scene: scene, heading: heading
+        });
+        i = j; continue;
+      }
+      i++;
+    }
+    return {
+      episode: epNum, file: filename || "", logline: header("EPISODE LOGLINE"), continuity: header("CONTINUITY NOTES"),
+      duration: out.reduce(function (a, l) { return Math.max(a, l.end); }, 0), lines: out, warnings: warnings
+    };
+  }
+
+  function loadShow(files) { // files: [{name, text}]
+    var eps = files.filter(function (f) { return /\.txt$/i.test(f.name); })
+      .sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; })
+      .map(function (f) { return parseEpisode(f.text, f.name); });
+    eps.sort(function (a, b) { return a.episode - b.episode; });
+    return eps;
+  }
+
+  function lineForPrompt(l) {
+    if (l.type === "dialogue") {
+      var tags = l.tags.length ? " (" + l.tags.join(", ") + ")" : "";
+      return l.id + " [" + l.start.toFixed(1) + "s] " + l.speaker + tags + ': "' + l.text + '"';
+    }
+    return l.id + " [" + l.start.toFixed(1) + "s] <" + l.type.toUpperCase() + "> " + l.text;
+  }
+  function showBrief(eps) { return eps.map(function (e) { return "Ep " + e.episode + ": " + e.logline; }).join("\n"); }
+  function proposeUser(brief, ep) {
+    return "SHOW CONTEXT (one-line summary of every episode; character names vary across scripts, e.g. a character may be called by a description before their name is revealed):\n" +
+      brief + "\n\nEPISODE " + ep.episode + " - logline: " + ep.logline + "\nEpisode length: " + ep.duration.toFixed(1) +
+      "s\n\nLINES:\n" + ep.lines.map(lineForPrompt).join("\n") + "\n\nFind the best promos in Episode " + ep.episode + ".";
+  }
+  function plain(l) {
+    if (l.type === "dialogue") return l.speaker + " (" + l.tags.join(", ") + '): "' + l.text + '"';
+    return "[" + l.type + "] " + l.text;
+  }
+  function strangerUser(lines) { return "CLIP TRANSCRIPT:\n" + lines.map(plain).join("\n"); }
+
+  // ---------------------------------------------------------------- verify
+  var MIN_S = 20, MAX_S = 60, HOOK_WINDOW_S = 3, TAIL_WARN_S = 6, JUMP_WARN_S = 20;
+
+  function Show(eps) {
+    var self = this;
+    this.eps = {}; this.byId = {}; this.list = eps;
+    eps.forEach(function (e) {
+      self.eps[e.episode] = e;
+      e.lines.forEach(function (l, idx) { self.byId[l.id] = [e.episode, idx, l]; });
+    });
+    this.lastEp = Math.max.apply(null, eps.map(function (e) { return e.episode; }));
+  }
+
+  function inside(t, lines) {
+    for (var i = 0; i < lines.length; i++) { var l = lines[i]; if (l.type === "dialogue" && l.start < t && t < l.end) return l; }
+    return null;
+  }
+  function snapStart(t, lines) {
+    var t0 = t, moved = [], l;
+    while ((l = inside(t, lines))) { t = l.start; moved.push(l.id); }
+    return [t, moved.length ? "start moved " + fmt(t0) + "->" + fmt(t) + " to avoid cutting into dialogue " + moved.join(", ") : null];
+  }
+  function snapEnd(t, lines) {
+    var t0 = t, moved = [], l;
+    while ((l = inside(t, lines))) { t = l.end; moved.push(l.id); }
+    return [t, moved.length ? "end moved " + fmt(t0) + "->" + fmt(t) + " so dialogue " + moved.join(", ") + " finishes" : null];
+  }
+  function say(l) { return l.type === "dialogue" ? l.speaker + ': "' + l.text + '"' : "[" + l.type + "] " + l.text; }
+  function asInt(v) { var f = parseFloat(v); if (isNaN(f)) return 0; return Math.max(0, Math.min(5, Math.round(f))); }
+
+  function verify(cand, show) {
+    var notes = [], warnings = [];
+    function reject(reason) { var r = Object.assign({}, cand); r.reject_reason = reason; return [null, r]; }
+    var segsIn = cand.segments || [];
+    if (!segsIn.length) return reject("no segments");
+    var ids = [];
+    segsIn.forEach(function (s) { ids.push(s.start_id, s.end_id); });
+    ids.push(cand.hook_id, cand.cliffhanger_id);
+    var missing = ids.filter(function (x) { return !show.byId[x]; });
+    if (missing.length) return reject("unknown line IDs " + JSON.stringify(missing) + " (model invented or mistyped them)");
+    var epSet = {}; ids.forEach(function (x) { epSet[show.byId[x][0]] = 1; });
+    var epKeys = Object.keys(epSet);
+    if (epKeys.length !== 1) return reject("segments span episodes " + JSON.stringify(epKeys.map(Number).sort(function (a, b) { return a - b; })) + " - cross-episode joins are out of scope for v1");
+    var epNum = Number(epKeys[0]), ep = show.eps[epNum], lines = ep.lines;
+    var segs = [], prevEnd = -1;
+    for (var n = 0; n < segsIn.length; n++) {
+      var s = segsIn[n], a = show.byId[s.start_id][2], b = show.byId[s.end_id][2];
+      var r1 = snapStart(a.start, lines); if (r1[1]) notes.push("seg " + (n + 1) + ": " + r1[1]);
+      var r2 = snapEnd(Math.max(b.end, a.end), lines); if (r2[1]) notes.push("seg " + (n + 1) + ": " + r2[1]);
+      var start = r1[0], end = r2[0];
+      if (end <= start) return reject("segment " + (n + 1) + " ends before it starts (" + s.start_id + ".." + s.end_id + ")");
+      if (start < prevEnd) return reject("segment " + (n + 1) + " overlaps or comes before segment " + n);
+      segs.push({ start: start, end: end, start_id: s.start_id, end_id: s.end_id });
+      prevEnd = end;
+    }
+    var hook = show.byId[cand.hook_id][2], s1 = segs[0];
+    if (!(s1.start <= hook.start && hook.start < s1.end)) return reject("hook line " + hook.id + " is not inside segment 1");
+    var trimmed = false;
+    if (hook.start - s1.start > HOOK_WINDOW_S) {
+      var ns = snapStart(hook.start, lines)[0];
+      notes.push("seg 1: trimmed " + (hook.start - s1.start).toFixed(1) + "s of setup so the clip opens on the hook (" + fmt(s1.start) + "->" + fmt(ns) + ")");
+      s1.start = ns; s1.start_id = hook.id; trimmed = true;
+    }
+    var hookAt = round2(hook.start - s1.start);
+    if (hookAt > HOOK_WINDOW_S) return reject("hook starts " + hookAt.toFixed(1) + "s into the clip (must be <= 3s)");
+    for (var k = 1; k < segs.length; k++) {
+      var skip = segs[k].start - segs[k - 1].end;
+      if (skip > JUMP_WARN_S) warnings.push("join skips " + Math.round(skip) + "s of story between segments " + k + " and " + (k + 1) + " - check it still reads as one moment");
+    }
+    var duration = round2(segs.reduce(function (acc, x) { return acc + (x.end - x.start); }, 0));
+    if (duration < MIN_S) return reject("too short (" + duration.toFixed(1) + "s < 20s)" + (trimmed ? " after trimming setup" : ""));
+    if (duration > MAX_S) return reject("too long (" + duration.toFixed(1) + "s > 60s)");
+    var cliff = show.byId[cand.cliffhanger_id][2], last = segs[segs.length - 1];
+    if (!(last.start <= cliff.start && cliff.start <= last.end)) return reject("cliffhanger line " + cliff.id + " is not inside the last segment");
+    var tail = round2(last.end - cliff.end);
+    if (tail > TAIL_WARN_S) warnings.push(tail.toFixed(1) + "s of footage after the cliffhanger line - may feel like it resolves");
+    var afterIdx = show.byId[last.end_id][1] + 1;
+    var after = lines.slice(afterIdx).filter(function (l) { return l.type === "dialogue" && l.start >= last.end - 0.01; }).slice(0, 2);
+    var atEnd = ep.duration - last.end <= 1.0;
+    var payoff = atEnd ? Math.min(epNum + 1, show.lastEp) : epNum;
+    if (atEnd && epNum === show.lastEp) warnings.push("cuts at the end of the last available episode - payoff not in this pack");
+    var out = Object.assign({}, cand);
+    var sc = {}; Object.keys(cand.scores || {}).forEach(function (key) { sc[key] = asInt(cand.scores[key]); });
+    out.scores = sc;
+    out.hook_type = String(cand.hook_type || "other");
+    Object.assign(out, {
+      episode: epNum,
+      segments: segs.map(function (x) { return Object.assign({}, x, { start_ts: fmt(x.start), end_ts: fmt(x.end) }); }),
+      duration: duration, hook_at: hookAt, hook_text: say(hook), cliffhanger_text: say(cliff),
+      after_cut: atEnd ? ["(episode ends - continues in Episode " + payoff + ")"] : after.map(say),
+      ends_at_episode_end: atEnd, payoff_episode: payoff, repairs: notes, warnings: warnings
+    });
+    return [out, null];
+  }
+
+  function clipLines(c, show) {
+    var ep = show.eps[c.episode], out = [];
+    c.segments.forEach(function (s) {
+      ep.lines.forEach(function (l) { if (l.start >= s.start - 0.01 && l.end <= s.end + 0.01) out.push(l); });
+    });
+    return out;
+  }
+
+  // ---------------------------------------------------------------- rules-only baseline
+  var HIGH_TAGS = ["screaming", "shouting", "furious", "outraged", "horrified", "gasping", "weeping", "desperate", "venomous", "threatening", "cruel", "crying out", "enraged", "panicked", "sobbing", "terrified", "shocked", "accusing", "seething", "roaring", "begging"];
+  var PHYSICAL = /\b(slap\w*|strike\w*|struck|shove\w*|grab\w*|seiz\w*|explo\w*|blood\w*|knife|blade|sword|chain\w*|collaps\w*|kneel\w*|kiss\w*|throw\w*|threw|smash\w*|burn\w*|fire|flames|poison\w*)\b/i;
+  function intensity(l) {
+    var s = 0;
+    if (l.type === "dialogue") {
+      s += 2 * l.tags.filter(function (t) { return HIGH_TAGS.indexOf(t.toLowerCase()) >= 0; }).length;
+      s += l.text.indexOf("!") >= 0 ? 1 : 0;
+    }
+    if ((l.type === "action" || l.type === "camera") && PHYSICAL.test(l.text)) s += 2;
+    return s;
+  }
+  function endingScore(l, ep) {
+    if (ep.duration - l.end <= 1.0) return 3;
+    if (l.type === "dialogue" && /\?\s*$/.test(l.text)) return 2;
+    if (l.type === "dialogue" && l.text.indexOf("!") >= 0) return 1;
+    return 0;
+  }
+  function baseline(eps, show, perEpisode) {
+    perEpisode = perEpisode || 2;
+    var kept = [], rejected = [], ENDS = ["a plain line", "an exclamation", "a question", "the episode's final beat"];
+    eps.forEach(function (ep) {
+      var speakable = ep.lines.filter(function (l) { return l.type === "dialogue" || l.type === "action"; });
+      var hooks = speakable.filter(function (l) { return intensity(l) >= 2; })
+        .sort(function (a, b) { return (intensity(b) - intensity(a)) || (a.start - b.start); });
+      var chosen = [];
+      for (var i = 0; i < hooks.length && chosen.length < perEpisode; i++) {
+        var h = hooks[i];
+        if (chosen.some(function (c) { return c.s - 5 <= h.start && h.start <= c.e; })) continue;
+        var win = speakable.filter(function (l) { return h.start + MIN_S <= l.end && l.end <= h.start + MAX_S; });
+        if (!win.length) continue;
+        var end = win[0];
+        win.forEach(function (l) {
+          var a = endingScore(l, ep), b = endingScore(end, ep);
+          if (a > b || (a === b && l.end > end.end)) end = l;
+        });
+        var cand = { source: "rules", segments: [{ start_id: h.id, end_id: end.id }], hook_id: h.id, cliffhanger_id: end.id,
+          why: "Opens on high-intensity line (score " + intensity(h) + "); ends on " + ENDS[endingScore(end, ep)],
+          rule_score: intensity(h) + endingScore(end, ep) };
+        var r = verify(cand, show);
+        if (r[0]) { kept.push(r[0]); chosen.push({ s: r[0].segments[0].start, e: r[0].segments[r[0].segments.length - 1].end }); }
+        else rejected.push(r[1]);
+      }
+    });
+    kept.sort(function (a, b) { return b.rule_score - a.rule_score; });
+    return [kept, rejected];
+  }
+  function finishRules(kept, freeEpisodes) {
+    var seen = {};
+    kept.forEach(function (c, i) {
+      c.cand_id = "R" + pad(i + 1, 2); c.tier = "R"; c.rank = i + 1; c.in_free_window = c.payoff_episode <= freeEpisodes;
+      c.rank_reason = "Rules score " + c.rule_score + " (intensity of opening line + type of ending)";
+      c.post_first = !seen[c.episode] && Object.keys(seen).length < 10;
+      if (c.post_first) seen[c.episode] = 1;
+    });
+    return kept;
+  }
+
+  // ---------------------------------------------------------------- pipeline (same order and rules as pipeline.py)
+  function standalone(c) { return c.stranger ? c.stranger.standalone_score : (c.scores || {}).standalone || 0; }
+  function scoreSum(c) { var s = c.scores || {}; return (s.hook || 0) + (s.cliffhanger || 0) + standalone(c); }
+  function overlap(a, b) {
+    if (a.episode !== b.episode) return 0;
+    var inter = 0;
+    a.segments.forEach(function (x) { b.segments.forEach(function (y) { inter += Math.max(0, Math.min(x.end, y.end) - Math.max(x.start, y.start)); }); });
+    return inter / Math.min(a.duration, b.duration);
+  }
+  function dedupe(cands) {
+    var out = [], dups = [];
+    cands.slice().sort(function (a, b) { return scoreSum(b) - scoreSum(a); }).forEach(function (c) {
+      var twin = null;
+      for (var i = 0; i < out.length; i++) if (overlap(c, out[i]) > 0.5) { twin = out[i]; break; }
+      if (!twin) out.push(c);
+      else dups.push(Object.assign({}, c, { reject_reason: "near-duplicate of " + twin.cand_id + " (>50% overlap, lower score)" }));
+    });
+    return [out, dups];
+  }
+  function processProposals(ep, res, show, kept, rejected) {
+    if (!res || res._unparseable || !Array.isArray(res.promos)) {
+      rejected.push({ episode: ep.episode, source: "llm", reject_reason: "model returned unparseable output" }); return;
+    }
+    res.promos.forEach(function (p, n) {
+      var cand = Object.assign({}, p, { source: "llm", proposed_in_episode: ep.episode, cand_id: "E" + pad(ep.episode, 2) + "-P" + (n + 1) });
+      var r = verify(cand, show);
+      if (r[0]) kept.push(r[0]); else rejected.push(r[1]);
+    });
+  }
+  function tier(c) {
+    var s = c.scores || {}, hook = s.hook || 0, cliff = s.cliffhanger || 0, alone = standalone(c);
+    var st = c.stranger || {};
+    var resolved = String(st.open_question || "").trim().toLowerCase().indexOf("none") === 0;
+    if (hook >= 4 && cliff >= 4 && alone >= 4 && !resolved) return "A";
+    if (Math.min(hook, cliff, alone) >= 3 && !resolved) return "B";
+    return "C";
+  }
+  function rank(cands, freeEpisodes) {
+    cands.forEach(function (c) { c.tier = tier(c); c.in_free_window = c.payoff_episode <= freeEpisodes; });
+    cands.sort(function (a, b) {
+      if (a.tier !== b.tier) return a.tier < b.tier ? -1 : 1;
+      if (a.in_free_window !== b.in_free_window) return a.in_free_window ? -1 : 1;
+      var d = scoreSum(b) - scoreSum(a); if (d) return d;
+      return a.payoff_episode - b.payoff_episode;
+    });
+    var seen = {}, n = 0;
+    cands.forEach(function (c) {
+      c.post_first = false;
+      if ((c.tier === "A" || c.tier === "B") && !seen[c.episode] && n < 10) { c.post_first = true; n++; seen[c.episode] = 1; }
+    });
+    cands.forEach(function (c, i) {
+      c.rank = i + 1;
+      var s = c.scores || {}, parts = ["Tier " + c.tier + ": hook " + (s.hook || "?") + "/5, cliffhanger " + (s.cliffhanger || "?") + "/5"];
+      parts.push(c.stranger ? "blind stranger understood it " + c.stranger.standalone_score + "/5" : "standalone " + (s.standalone || "?") + "/5 (self-rated, not blind-tested)");
+      parts.push("payoff in Ep " + c.payoff_episode + " (" + (c.in_free_window ? "inside" : "outside") + " first " + freeEpisodes + " episodes)");
+      c.rank_reason = parts.join("; ");
+    });
+    return cands;
+  }
+  function applyStranger(c, res) {
+    if (!res || res._unparseable) { c.stranger_error = "blind test returned no usable score"; return; }
+    var f = parseFloat(res.standalone_score);
+    if (isNaN(f)) { c.stranger_error = "blind test returned no usable score"; return; }
+    res.standalone_score = Math.round(f); c.stranger = res;
+  }
+  // Blind-test in RANKED order until every "post first" clip is tested. callStranger(c) -> Promise<res>
+  async function rankWithBlindTest(cands, show, callStranger, topN, freeEpisodes, log) {
+    var ranked = rank(cands, freeEpisodes), budget = topN;
+    for (var round = 0; round < 4; round++) {
+      var untestedFirst = ranked.filter(function (c) { return c.post_first && !c.stranger; });
+      if (!untestedFirst.length && budget <= 0) break;
+      var order = untestedFirst.concat(ranked.filter(function (c) { return !c.post_first; }));
+      var n = Math.max(untestedFirst.length, budget);
+      var batch = order.filter(function (c) { return !c.stranger; }).slice(0, n);
+      var results = await Promise.all(batch.map(function (c) { return callStranger(c, strangerUser(clipLines(c, show))); }));
+      batch.forEach(function (c, i) { applyStranger(c, results[i]); });
+      budget -= n;
+      ranked = rank(cands, freeEpisodes);
+      if (!ranked.some(function (c) { return c.post_first && !c.stranger; })) break;
+    }
+    return ranked;
+  }
+
+  // ---------------------------------------------------------------- model client
+  function parseJSON(text) {
+    try { return JSON.parse(text); } catch (e) {
+      var m = /\{[\s\S]*\}/.exec(text || "");
+      if (m) { try { return JSON.parse(m[0]); } catch (e2) {} }
+      return { _unparseable: true, raw: String(text || "").slice(0, 2000) };
+    }
+  }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  // cfg: {provider: gemini|openai|replay, key, model, baseUrl, replay: {tag: parsed}, timeoutMs, onEvent}
+  function makeClient(cfg) {
+    var stats = { calls: 0, retries: 0, in_tokens: 0, out_tokens: 0, model_version: cfg.model };
+    async function post(url, body, headers) {
+      var ctl = new AbortController(), timer = setTimeout(function () { ctl.abort(); }, cfg.timeoutMs || 240000);
+      try {
+        var r = await fetch(url, { method: "POST", headers: Object.assign({ "Content-Type": "application/json" }, headers), body: JSON.stringify(body), signal: ctl.signal });
+        var txt = await r.text();
+        if (!r.ok) { var err = new Error("HTTP " + r.status + ": " + txt.slice(0, 300)); err.status = r.status; err.body = txt; throw err; }
+        return JSON.parse(txt);
+      } finally { clearTimeout(timer); }
+    }
+    async function once(system, user) {
+      if (cfg.provider === "gemini") {
+        var url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(cfg.model) + ":generateContent";
+        var d = await post(url, { systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: user }] }],
+          generationConfig: { temperature: 0, responseMimeType: "application/json" } }, { "x-goog-api-key": cfg.key });
+        var parts = (((d.candidates || [])[0] || {}).content || {}).parts || [];
+        var u = d.usageMetadata || {};
+        stats.in_tokens += u.promptTokenCount || 0; stats.out_tokens += (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0);
+        if (d.modelVersion) stats.model_version = d.modelVersion;
+        return parts.filter(function (p) { return !p.thought; }).map(function (p) { return p.text || ""; }).join("");
+      }
+      if (cfg.provider === "openai") {
+        var base = (cfg.baseUrl || "https://api.openai.com/v1").replace(/\/+$/, "");
+        var o = await post(base + "/chat/completions", { model: cfg.model, temperature: 0, messages: [{ role: "system", content: system }, { role: "user", content: user }] },
+          { "Authorization": "Bearer " + cfg.key });
+        var uu = o.usage || {}; stats.in_tokens += uu.prompt_tokens || 0; stats.out_tokens += uu.completion_tokens || 0;
+        return o.choices[0].message.content;
+      }
+      throw new Error("unknown provider " + cfg.provider);
+    }
+    async function call(system, user, tag) {
+      if (cfg.provider === "replay") {
+        var hit = cfg.replay[tag];
+        return hit === undefined ? { _missing: true } : hit;
+      }
+      var delay = 10000;
+      for (var attempt = 0; attempt < 5; attempt++) {
+        var t0 = Date.now();
+        try {
+          var text = await once(system, user);
+          stats.calls++;
+          if (cfg.onEvent) cfg.onEvent({ tag: tag, ok: true, seconds: (Date.now() - t0) / 1000 });
+          return parseJSON(text);
+        } catch (e) {
+          var retryable = e.name === "AbortError" || e.name === "TypeError" || [429, 500, 502, 503, 504].indexOf(e.status) >= 0;
+          if (!retryable || attempt === 4) {
+            if (cfg.onEvent) cfg.onEvent({ tag: tag, ok: false, error: e.message || String(e) });
+            throw e;
+          }
+          var m = /"retryDelay":\s*"(\d+)/.exec(e.body || ""), wait = m ? (parseInt(m[1], 10) + 1) * 1000 : delay;
+          stats.retries++;
+          if (cfg.onEvent) cfg.onEvent({ tag: tag, retry: true, reason: e.status ? "HTTP " + e.status : (e.name === "AbortError" ? "no reply in time" : "network"), wait: wait / 1000 });
+          await sleep(wait); delay = Math.min(delay * 2, 90000);
+        }
+      }
+    }
+    return { call: call, stats: stats };
+  }
+
+  // Run tasks with at most `limit` in flight; results keep input order.
+  async function pool(items, limit, worker) {
+    var results = new Array(items.length), next = 0;
+    async function lane() { while (next < items.length) { var i = next++; results[i] = await worker(items[i], i); } }
+    var lanes = []; for (var k = 0; k < Math.max(1, limit); k++) lanes.push(lane());
+    await Promise.all(lanes);
+    return results;
+  }
+
+  // ---------------------------------------------------------------- full AI run
+  // opts: {client, runEps, show, allEps, topN, freeEpisodes, parallel, onProgress}
+  async function runAI(opts) {
+    var brief = showBrief(opts.allEps), kept = [], rejected = [], empty = [];
+    var tag = function (ep) { return "propose-ep" + pad(ep.episode, 2); };
+    var results = await pool(opts.runEps, opts.parallel || 3, async function (ep) {
+      if (opts.onProgress) opts.onProgress({ episode: ep.episode, state: "running" });
+      try {
+        var res = await opts.client.call(P.PROPOSE_SYSTEM, proposeUser(brief, ep), tag(ep));
+        if (opts.onProgress) opts.onProgress({ episode: ep.episode, state: res && res._missing ? "missing" : "done", n: res && res.promos ? res.promos.length : 0 });
+        return res;
+      } catch (e) {
+        if (opts.onProgress) opts.onProgress({ episode: ep.episode, state: "failed", error: e.message });
+        return { _failed: true, error: e.message };
+      }
+    });
+    opts.runEps.forEach(function (ep, i) {
+      var res = results[i];
+      if (res._failed) { rejected.push({ episode: ep.episode, source: "llm", reject_reason: "model call failed: " + res.error }); return; }
+      if (res._missing) { rejected.push({ episode: ep.episode, source: "llm", reject_reason: "no saved answer for this episode in the replay folder" }); return; }
+      if (Array.isArray(res.promos) && !res.promos.length) empty.push(ep.episode);
+      processProposals(ep, res, opts.show, kept, rejected);
+    });
+    var proposed = kept.length + rejected.length;
+    var d = dedupe(kept); kept = d[0]; rejected = rejected.concat(d[1]);
+    var callStranger = async function (c, user) {
+      try { var r = await opts.client.call(P.STRANGER_SYSTEM, user, "stranger-" + c.cand_id); return r && r._missing ? null : r; }
+      catch (e) { return null; }
+    };
+    var ranked = opts.topN ? await rankWithBlindTest(kept, opts.show, callStranger, opts.topN, opts.freeEpisodes)
+      : rank(kept, opts.freeEpisodes);
+    return { ranked: ranked, rejected: rejected, proposed: proposed, emptyEpisodes: empty };
+  }
+
+  var api = { parseEpisode: parseEpisode, loadShow: loadShow, Show: Show, verify: verify, clipLines: clipLines, baseline: baseline,
+    finishRules: finishRules, rank: rank, dedupe: dedupe, runAI: runAI, makeClient: makeClient, pool: pool, fmt: fmt,
+    proposeUser: proposeUser, showBrief: showBrief, strangerUser: strangerUser, lineForPrompt: lineForPrompt, parseJSON: parseJSON };
+  root.FTP = api;
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+})(typeof window !== "undefined" ? window : globalThis);
+</script>
+<script>/* Find the Promos - browser UI. Everything runs locally; only prompts go to the chosen model provider. */
+(function () {
+  "use strict";
+  var F = window.FTP;
+  var $ = function (sel) { return document.querySelector(sel); };
+  var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
+  var S = { eps: null, show: null, replay: null, result: null, rules: null, tab: "first", dec: {}, why: {}, running: false };
+
+  // ------------------------------------------------------------ step 1: load scripts
+  function readFiles(fileList) {
+    var files = Array.prototype.filter.call(fileList, function (f) { return /\.txt$/i.test(f.name); });
+    if (!files.length) { setLoadMsg("No .txt screenplay files found. Pick the folder that holds one .txt per episode (unzip the pack first).", true); return; }
+    Promise.all(files.map(function (f) { return f.text().then(function (t) { return { name: f.name, text: t }; }); })).then(function (arr) {
+      try {
+        S.eps = F.loadShow(arr); S.show = new F.Show(S.eps);
+      } catch (e) { setLoadMsg("Could not read these files: " + e.message, true); return; }
+      var lines = S.eps.reduce(function (a, e) { return a + e.lines.length; }, 0);
+      var mins = S.eps.reduce(function (a, e) { return a + e.duration; }, 0) / 60;
+      var warn = S.eps.reduce(function (a, e) { return a + e.warnings.length; }, 0);
+      var noLines = S.eps.filter(function (e) { return !e.lines.length; }).map(function (e) { return e.episode; });
+      var first = S.eps[0].episode, last = S.eps[S.eps.length - 1].episode;
+      $("#fromEp").value = first; $("#toEp").value = Math.min(last, first + 2);
+      $("#fromEp").min = $("#toEp").min = first; $("#fromEp").max = $("#toEp").max = last;
+      setLoadMsg("Loaded " + S.eps.length + " episodes (Ep " + first + "–" + last + "), " + lines.toLocaleString() + " timestamped lines, " + mins.toFixed(0) + " min of script." +
+        (warn ? " " + warn + " blocks had no timestamp and were skipped." : "") + (noLines.length ? " No lines found in Ep " + noLines.join(", ") + ": check the format." : ""), !!noLines.length);
+      S.rules = F.finishRules(F.baseline(S.eps, S.show)[0], parseInt($("#freeEps").value, 10) || 10);
+      $("#step2").hidden = false; updateRunLabel();
+    });
+  }
+  function setLoadMsg(t, bad) { var m = $("#loadMsg"); m.textContent = t; m.className = bad ? "msg bad" : "msg ok"; }
+
+  // ------------------------------------------------------------ step 2: provider
+  function provider() { return document.querySelector('input[name="prov"]:checked').value; }
+  function syncProvider() {
+    var p = provider();
+    document.querySelectorAll("[data-prov]").forEach(function (el) { el.hidden = el.getAttribute("data-prov") !== p; });
+    $("#aiOpts").hidden = p === "rules";
+    updateRunLabel();
+  }
+  function updateRunLabel() {
+    if (!S.eps) return;
+    var p = provider(), a = parseInt($("#fromEp").value, 10), b = parseInt($("#toEp").value, 10);
+    var n = S.eps.filter(function (e) { return e.episode >= a && e.episode <= b; }).length;
+    $("#runBtn").textContent = p === "rules" ? "Find promos (rules only, instant)" : "Find promos in " + n + " episode" + (n === 1 ? "" : "s");
+    var par = parseInt($("#parallel").value, 10) || 1;
+    $("#estimate").textContent = p === "gemini" || p === "openai" ? "Each call takes about 30–90 s; with " + par + " at a time, " + n + " episodes take roughly " + Math.max(1, Math.round(n * 60 / par / 60)) + "–" + Math.max(2, Math.round(n * 90 / par / 60)) + " min, plus the blind tests." : "";
+  }
+  function checkGemini(key) {
+    return fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", { headers: { "x-goog-api-key": key } })
+      .then(function (r) { return r.text().then(function (t) { if (!r.ok) throw new Error("Google rejected the key (HTTP " + r.status + "): " + t.slice(0, 160)); return JSON.parse(t); }); })
+      .then(function (d) {
+        return (d.models || []).filter(function (m) { return (m.supportedGenerationMethods || []).indexOf("generateContent") >= 0; })
+          .map(function (m) { return m.name.replace(/^models\//, ""); });
+      }, function (e) {
+        if (e instanceof TypeError) throw new Error("This page can't reach Google from here. Inside claude.ai, outside calls are blocked: open the GitHub Pages version of this page, or use Rules only / Replay.");
+        throw e;
+      });
+  }
+  function onCheckKey() {
+    var key = $("#gemKey").value.trim(), msg = $("#keyMsg");
+    if (!key) { msg.textContent = "Paste a key first."; msg.className = "msg bad"; return; }
+    msg.textContent = "Checking…"; msg.className = "msg";
+    checkGemini(key).then(function (models) {
+      var flash = models.filter(function (m) { return /flash/.test(m); });
+      $("#gemModels").innerHTML = models.map(function (m) { return '<option value="' + esc(m) + '"></option>'; }).join("");
+      msg.textContent = "Key works. " + flash.length + " Flash models available" + (flash.length ? ", e.g. " + flash.slice(0, 3).join(", ") : "") + ".";
+      msg.className = "msg ok";
+    }, function (e) { msg.textContent = e.message; msg.className = "msg bad"; });
+  }
+  function readReplay(fileList) {
+    var files = Array.prototype.filter.call(fileList, function (f) { return /\.(json|txt)$/i.test(f.name); });
+    Promise.all(files.map(function (f) { return f.text().then(function (t) { return { name: f.name, text: t }; }); })).then(function (arr) {
+      var map = {}, n = 0;
+      arr.forEach(function (f) {
+        try {
+          if (/\.json$/i.test(f.name)) { var r = JSON.parse(f.text); if (r && r.tag && r.parsed) { map[r.tag] = r.parsed; n++; } }
+          else { map[f.name.replace(/\.txt$/i, "")] = F.parseJSON(f.text); n++; }
+        } catch (e) { /* skip unreadable file */ }
+      });
+      S.replay = map;
+      $("#replayMsg").textContent = n ? "Loaded " + n + " saved model answers." : "No saved answers found. Pick the llm_raw folder from a run.";
+      $("#replayMsg").className = n ? "msg ok" : "msg bad";
+    });
+  }
+
+  // ------------------------------------------------------------ step 3: run
+  function chips(eps) {
+    $("#chips").innerHTML = eps.map(function (e) { return '<span class="chip" id="chip' + e.episode + '" title="Episode ' + e.episode + ': waiting">' + e.episode + "</span>"; }).join("");
+  }
+  function setChip(ep, state, title) { var c = $("#chip" + ep); if (c) { c.className = "chip " + state; c.title = "Episode " + ep + ": " + title; } }
+  function log(t, bad) {
+    var li = document.createElement("li"); li.textContent = t; if (bad) li.className = "bad";
+    var ul = $("#log"); ul.insertBefore(li, ul.firstChild); while (ul.children.length > 12) ul.removeChild(ul.lastChild);
+  }
+  function onRun() {
+    if (S.running || !S.eps) return;
+    var p = provider(), free = parseInt($("#freeEps").value, 10) || 10;
+    S.rules = F.finishRules(F.baseline(S.eps, S.show)[0], free);
+    S.dec = {}; S.why = {};
+    if (p === "rules") {
+      S.result = { ranked: S.rules, rejected: [], proposed: S.rules.length, emptyEpisodes: [], mode: "rules" };
+      S.tab = "first"; $("#step3").hidden = true; render(); return;
+    }
+    var a = parseInt($("#fromEp").value, 10), b = parseInt($("#toEp").value, 10);
+    var runEps = S.eps.filter(function (e) { return e.episode >= a && e.episode <= b; });
+    if (!runEps.length) { alertMsg("No episodes in that range."); return; }
+    var cfg = { provider: p, timeoutMs: 240000 };
+    if (p === "gemini") { cfg.key = $("#gemKey").value.trim(); cfg.model = $("#gemModel").value.trim() || "gemini-flash-latest"; if (!cfg.key) { alertMsg("Paste a Gemini API key, or choose Rules only."); return; } }
+    if (p === "openai") { cfg.key = $("#oaKey").value.trim(); cfg.model = $("#oaModel").value.trim(); cfg.baseUrl = $("#oaBase").value.trim(); if (!cfg.key || !cfg.model) { alertMsg("Fill in the API key and the model name."); return; } }
+    if (p === "replay") { if (!S.replay) { alertMsg("Pick the folder of saved answers (llm_raw) first."); return; } cfg.replay = S.replay; cfg.model = "replay of a saved run"; }
+    var t0 = Date.now(), timer;
+    cfg.onEvent = function (e) {
+      if (e.retry) log(e.tag + ": " + e.reason + ", retrying in " + Math.round(e.wait) + " s");
+      else if (e.ok) log(e.tag + ": model replied in " + e.seconds.toFixed(0) + " s");
+      else log(e.tag + ": failed: " + e.error, true);
+    };
+    var client = F.makeClient(cfg);
+    S.running = true; $("#runBtn").disabled = true; $("#step3").hidden = false; $("#results").hidden = true; $("#log").innerHTML = "";
+    chips(runEps);
+    $("#runStatus").textContent = "Starting…";
+    timer = setInterval(function () { $("#elapsed").textContent = Math.round((Date.now() - t0) / 1000) + " s"; }, 1000);
+    var pre = p === "gemini" ? checkGemini(cfg.key).then(function () { log("Key checked; calling " + cfg.model); }) : Promise.resolve();
+    pre.then(function () {
+      $("#runStatus").textContent = "Reading episodes and proposing clips…";
+      return F.runAI({ client: client, runEps: runEps, show: S.show, allEps: S.eps, topN: parseInt($("#blindN").value, 10) || 0,
+        freeEpisodes: free, parallel: p === "replay" ? 8 : parseInt($("#parallel").value, 10) || 3,
+        onProgress: function (ev) {
+          if (ev.state === "running") setChip(ev.episode, "run", "model is reading it");
+          else if (ev.state === "done") setChip(ev.episode, "done", ev.n + " clip(s) proposed");
+          else if (ev.state === "missing") setChip(ev.episode, "fail", "no saved answer");
+          else setChip(ev.episode, "fail", ev.error || "failed");
+          var done = document.querySelectorAll("#chips .done, #chips .fail").length;
+          $("#runStatus").textContent = done < runEps.length ? "Proposed clips for " + done + " of " + runEps.length + " episodes…" : "Running the blind stranger test on the top clips…";
+        } });
+    }).then(function (res) {
+      res.mode = p; res.model = client.stats.model_version || cfg.model; res.stats = client.stats; res.seconds = Math.round((Date.now() - t0) / 1000);
+      S.result = res; S.tab = "first";
+      $("#runStatus").textContent = "Done in " + res.seconds + " s: " + res.ranked.length + " clips kept, " + res.rejected.length + " thrown out.";
+      render();
+    }, function (e) {
+      $("#runStatus").textContent = "Stopped: " + e.message; log(e.message, true);
+    }).then(function () { S.running = false; $("#runBtn").disabled = false; clearInterval(timer); });
+  }
+  function alertMsg(t) { var m = $("#runMsg"); m.textContent = t; m.className = "msg bad"; setTimeout(function () { m.textContent = ""; }, 6000); }
+
+  // ------------------------------------------------------------ step 4: results
+  var REASONS = ["Weak hook", "Ending resolves", "Confusing cold", "Wrong cut points", "Spoils too much"];
+  function strip(c) {
+    var dur = S.show.eps[c.episode].duration || 1, pct = function (t) { return Math.max(0, Math.min(100, t / dur * 100)).toFixed(3) + "%"; };
+    var first = c.segments[0], last = c.segments[c.segments.length - 1], h = "";
+    c.segments.forEach(function (s) { h += '<span class="seg" style="left:' + pct(s.start) + ";width:" + pct(s.end - s.start) + '"></span>'; });
+    h += '<span class="hookwin" style="left:' + pct(first.start) + ";width:" + pct(3) + '"></span>';
+    if (!c.ends_at_episode_end) h += '<span class="withheld" style="left:' + pct(last.end) + ";width:" + pct(Math.min(6, dur - last.end)) + '"></span>';
+    h += '<span class="cut" style="left:' + pct(last.end) + '"></span>';
+    return '<div class="strip" aria-hidden="true"><span class="t0">0:00</span>' + h + '<span class="t1">' + Math.floor(dur / 60) + ":" + String(Math.floor(dur % 60)).padStart(2, "0") + "</span></div>";
+  }
+  function card(c) {
+    var s = c.scores || {}, ev = c.evidence || {}, st = c.stranger, d = S.dec[c.cand_id] || "";
+    var segs = c.segments.map(function (x, i) { return '<button class="copy" data-copy="Ep ' + c.episode + " " + x.start_ts + "-" + x.end_ts + '">Ep ' + c.episode + " &nbsp;" + x.start_ts + " – " + x.end_ts + "</button>"; }).join(" ");
+    var flags = [];
+    if (c.reveals_major_twist) flags.push('<li class="flag spoil">Reveals a major twist. Your call whether that is bait or a spoiler.</li>');
+    (c.warnings || []).forEach(function (w) { flags.push('<li class="flag warn">' + esc(w) + "</li>"); });
+    (c.repairs || []).forEach(function (r) { flags.push('<li class="flag fix">Adjusted: ' + esc(r) + "</li>"); });
+    var score = function (k, label) { return s[k] ? '<div class="sc"><span class="n n' + s[k] + '">' + s[k] + "</span><span><b>" + label + "</b> " + esc(ev[k] || "") + "</span></div>" : ""; };
+    var tr = F.clipLines(c, S.show).filter(function (l) { return l.type !== "camera"; }).map(function (l) {
+      return '<li><span class="tc">' + l.start.toFixed(1) + "s</span> " + (l.type === "dialogue" ? '<span class="who">' + esc(l.speaker) + "</span> " + esc(l.text) : "<i>" + esc(l.text) + "</i>") + "</li>";
+    }).join("");
+    var stranger = st ? '<div class="stranger"><h4>Blind test: a separate call saw only this clip</h4><p><b>It understood:</b> ' + esc(st.what_is_happening) + "</p><p><b>It wants to know:</b> " + esc(st.open_question) +
+      "</p><p><b>Confused by:</b> " + esc((st.confusing || []).join("; ") || "nothing flagged") + '</p><p class="muted">Understood ' + esc(st.standalone_score) + "/5 · would keep watching " + esc(st.keep_watching_score) + "/5</p></div>" : "";
+    var reasons = d === "reject" ? '<div class="reasons">' + REASONS.map(function (r) { return '<button class="rsn' + (S.why[c.cand_id] === r ? " on" : "") + '" data-why="' + esc(r) + '" data-id="' + esc(c.cand_id) + '" aria-pressed="' + (S.why[c.cand_id] === r) + '">' + r + "</button>"; }).join("") + "</div>" : "";
+    return '<article class="promo tier' + c.tier + (d ? " is-" + d : "") + '">' +
+      '<header class="slate"><div class="rank"><span class="num">' + c.rank + '</span><span class="tierlbl">' + (c.tier === "R" ? "Rules" : "Tier " + c.tier) + "</span></div>" +
+      '<div class="where"><div class="segs">' + segs + '</div><p class="meta">' + c.duration.toFixed(1) + " s · hook at +" + c.hook_at.toFixed(1) + " s · payoff in Ep " + c.payoff_episode + (c.in_free_window ? " (early, likely free)" : "") + "</p></div>" +
+      '<div class="decide"><button class="keep" data-id="' + esc(c.cand_id) + '" aria-pressed="' + (d === "keep") + '">Keep</button><button class="reject" data-id="' + esc(c.cand_id) + '" aria-pressed="' + (d === "reject") + '">Reject</button>' + reasons + "</div></header>" +
+      strip(c) +
+      '<div class="beats"><div><h3 class="hk">Opens on</h3><p class="line">' + esc(c.hook_text) + '</p></div><div><h3>Cuts on</h3><p class="line">' + esc(c.cliffhanger_text) + '</p><p class="withheldtxt"><b>Withheld:</b> ' + esc((c.after_cut || []).join(" / ")) + "</p></div></div>" +
+      '<p class="why">' + esc(c.why || "") + "</p>" +
+      "<details><summary>Scores, blind test and full clip</summary>" +
+      (s.hook ? '<div class="scores">' + score("hook", "Hook") + score("cliffhanger", "Cliffhanger") + score("standalone", "Makes sense alone (self-rated)") + "</div>" : "") +
+      stranger + '<p class="muted">' + esc(c.rank_reason || "") + '</p><ol class="transcript">' + tr + "</ol></details>" +
+      (flags.length ? '<ul class="flags">' + flags.join("") + "</ul>" : "") + "</article>";
+  }
+  function rejectedList(rs) {
+    if (!rs.length) return '<p class="muted">Nothing was thrown out.</p>';
+    return '<ul class="rejected">' + rs.map(function (r) { return "<li><b>Ep " + esc(r.episode || r.proposed_in_episode || "?") + "</b> " + esc(String(r.why || "").slice(0, 120)) + ' <span class="muted">' + esc(r.reject_reason) + "</span></li>"; }).join("") + "</ul>";
+  }
+  function render() {
+    var R = S.result; if (!R) return;
+    var post = R.ranked.filter(function (c) { return c.post_first; });
+    var tabs = [["first", "Post first · " + post.length], ["all", "All clips · " + R.ranked.length]];
+    if (R.mode !== "rules") { tabs.push(["out", "Thrown out · " + R.rejected.length]); tabs.push(["rules", "Rules-only comparison · " + S.rules.length]); }
+    $("#tabs").innerHTML = tabs.map(function (t) { return '<button role="tab" data-tab="' + t[0] + '" aria-selected="' + (S.tab === t[0]) + '">' + t[1] + "</button>"; }).join("");
+    var list = S.tab === "first" ? post : S.tab === "all" ? R.ranked : S.tab === "rules" ? S.rules : null;
+    $("#cards").innerHTML = list ? (list.length ? list.map(card).join("") : '<p class="muted">No clips reached tier A or B.</p>') : rejectedList(R.rejected);
+    var kept = Object.keys(S.dec).filter(function (k) { return S.dec[k] === "keep"; }).length, rej = Object.keys(S.dec).filter(function (k) { return S.dec[k] === "reject"; }).length;
+    $("#summary").textContent = R.mode === "rules"
+      ? "Rules only (no AI): " + R.ranked.length + " clips from emotion tags, action words and episode endings. Good at timing, weak at meaning; compare with an AI run."
+      : R.proposed + " clips proposed by " + (R.model || R.mode) + ", " + R.ranked.length + " passed the timing checks, " + R.rejected.length + " thrown out. " + post.length + " to post first." +
+        (R.emptyEpisodes.length ? " No promo-worthy moment found in Ep " + R.emptyEpisodes.join(", ") + "." : "") +
+        (R.stats && R.stats.calls ? " " + R.stats.calls + " model calls, " + R.stats.retries + " retries, " + R.seconds + " s." : "");
+    $("#decCount").textContent = kept + " kept · " + rej + " rejected";
+    $("#results").hidden = false;
+  }
+
+  // ------------------------------------------------------------ export
+  function csvOf(rows) { return rows.map(function (r) { return r.map(function (x) { return '"' + String(x == null ? "" : x).replace(/"/g, '""') + '"'; }).join(","); }).join("\n"); }
+  function promosCSV() {
+    var head = ["rank", "tier", "post_first", "episode", "segments", "duration_s", "hook", "cliffhanger", "why", "hook_score", "cliffhanger_score", "standalone_score", "stranger_standalone", "payoff_episode", "reveals_major_twist", "decision", "reason"];
+    return csvOf([head].concat(S.result.ranked.map(function (c) {
+      var s = c.scores || {};
+      return [c.rank, c.tier, c.post_first, c.episode, c.segments.map(function (x) { return x.start_ts + "-" + x.end_ts; }).join(" + "), c.duration, c.hook_text, c.cliffhanger_text, c.why,
+        s.hook, s.cliffhanger, s.standalone, (c.stranger || {}).standalone_score, c.payoff_episode, c.reveals_major_twist, S.dec[c.cand_id] || "", S.why[c.cand_id] || ""];
+    })));
+  }
+  function download(name, text, type) {
+    var ok = false;
+    try { var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: type })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); ok = true; } catch (e) { ok = false; }
+    var m = $("#exportMsg");
+    m.textContent = ok ? "Downloaded " + name + ". If nothing appeared (downloads are blocked inside claude.ai), use Copy." : "Download blocked here; use Copy.";
+  }
+  function copyText(text, label) {
+    var m = $("#exportMsg");
+    try { navigator.clipboard.writeText(text).then(function () { m.textContent = label + " copied to the clipboard."; }, function () { m.textContent = "Copy was blocked by the browser."; }); }
+    catch (e) { m.textContent = "Copy was blocked by the browser."; }
+  }
+
+  // ------------------------------------------------------------ wiring
+  document.addEventListener("DOMContentLoaded", function () {
+    $("#folderIn").addEventListener("change", function (e) { readFiles(e.target.files); });
+    $("#filesIn").addEventListener("change", function (e) { readFiles(e.target.files); });
+    var dz = $("#drop");
+    dz.addEventListener("dragover", function (e) { e.preventDefault(); dz.classList.add("over"); });
+    dz.addEventListener("dragleave", function () { dz.classList.remove("over"); });
+    dz.addEventListener("drop", function (e) { e.preventDefault(); dz.classList.remove("over"); readFiles(e.dataTransfer.files); });
+    document.querySelectorAll('input[name="prov"]').forEach(function (r) { r.addEventListener("change", syncProvider); });
+    ["fromEp", "toEp", "parallel"].forEach(function (id) { $("#" + id).addEventListener("input", updateRunLabel); });
+    $("#checkKey").addEventListener("click", onCheckKey);
+    $("#replayIn").addEventListener("change", function (e) { readReplay(e.target.files); });
+    $("#step2").addEventListener("submit", function (e) { e.preventDefault(); onRun(); });
+    $("#tabs").addEventListener("click", function (e) { var t = e.target.closest("[data-tab]"); if (t) { S.tab = t.getAttribute("data-tab"); render(); } });
+    $("#cards").addEventListener("click", function (e) {
+      var b = e.target.closest("button"); if (!b) return;
+      var id = b.getAttribute("data-id");
+      if (b.classList.contains("keep") || b.classList.contains("reject")) {
+        var v = b.classList.contains("keep") ? "keep" : "reject"; S.dec[id] = S.dec[id] === v ? "" : v; render();
+      } else if (b.classList.contains("rsn")) { var w = b.getAttribute("data-why"); S.why[id] = S.why[id] === w ? "" : w; render(); }
+      else if (b.classList.contains("copy")) { copyText(b.getAttribute("data-copy"), "Timecode"); }
+    });
+    $("#dlCsv").addEventListener("click", function () { if (S.result) download("promos.csv", promosCSV(), "text/csv"); });
+    $("#cpCsv").addEventListener("click", function () { if (S.result) copyText(promosCSV(), "Promo list (CSV)"); });
+    $("#dlJson").addEventListener("click", function () { if (S.result) download("promos.json", JSON.stringify({ model: S.result.model, promos: S.result.ranked, rejected: S.result.rejected }, null, 1), "application/json"); });
+    syncProvider();
+  });
+})();
+</script>
+</body>
+</html>
